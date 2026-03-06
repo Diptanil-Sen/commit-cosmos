@@ -1,70 +1,133 @@
+/* ── CSS Variables ─────────────────────────────────────────────────────────── */
 :root {
-  --void: #02010a;
-  --ink: #06031a;
-  --surface: rgba(8, 5, 28, 0.92);
-  --surface2: rgba(12, 8, 38, 0.85);
-  --border: rgba(56, 189, 248, 0.15);
-  --border-bright: rgba(56, 189, 248, 0.45);
-
-  --blue: #38bdf8;
-  --cyan: #00ffe7;
+  --blue:   #38bdf8;
+  --cyan:   #00ffe7;
   --violet: #a78bfa;
-  --rose: #fb7185;
-  --gold: #fbbf24;
-  --green: #34d399;
-  --pink: #f472b6;
-
-  --text-1: #f0f4ff;
-  --text-2: #8892aa;
-  --text-3: #3a3a5c;
-
-  --font-display: 'Syne', sans-serif;
-  --font-mono: 'Space Mono', monospace;
+  --rose:   #fb7185;
+  --gold:   #fbbf24;
+  --green:  #34d399;
+  --bg:     #020408;
+  --sidebar-w: 280px;
 }
 
+/* ── Reset ──────────────────────────────────────────────────────────────────── */
 *, *::before, *::after {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
 }
 
 html, body, #root {
-  width: 100%;
   height: 100%;
   overflow: hidden;
-  background: var(--void);
-  color: var(--text-1);
-  font-family: var(--font-mono);
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.2); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(56, 189, 248, 0.4); }
-
-/* Selection */
-::selection { background: rgba(56, 189, 248, 0.25); color: white; }
-
-button { cursor: pointer; font-family: var(--font-mono); }
-input { font-family: var(--font-mono); }
-
-/* Glow utility classes */
-.glow-blue { text-shadow: 0 0 20px rgba(56, 189, 248, 0.8); }
-.glow-violet { text-shadow: 0 0 20px rgba(167, 139, 250, 0.8); }
-
-/* Scan line overlay */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: repeating-linear-gradient(
+body {
+  background: var(--bg);
+  color: #fff;
+  font-family: 'Space Mono', monospace;
+  /* Scanline CRT overlay */
+  background-image: repeating-linear-gradient(
     0deg,
     transparent,
     transparent 2px,
-    rgba(0, 0, 0, 0.03) 2px,
-    rgba(0, 0, 0, 0.03) 4px
+    rgba(0, 0, 0, 0.04) 2px,
+    rgba(0, 0, 0, 0.04) 4px
   );
-  pointer-events: none;
-  z-index: 9999;
 }
+
+/* ── App shell ──────────────────────────────────────────────────────────────── */
+.app-shell {
+  height: 100%;
+  position: relative;
+}
+
+/* ── Main layout: sidebar + canvas ─────────────────────────────────────────── */
+.main-layout {
+  display: flex;
+  height: 100%;
+  width: 100%;
+}
+
+.main-layout.hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ── Sidebar wrapper ────────────────────────────────────────────────────────── */
+.sidebar-wrapper {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  height: 100%;
+  overflow: hidden;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Canvas wrapper ─────────────────────────────────────────────────────────── */
+.canvas-wrapper {
+  flex: 1;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Hamburger (hidden on desktop) ─────────────────────────────────────────── */
+.hamburger {
+  display: none;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 50;
+  background: rgba(2,4,8,0.85);
+  border: 1px solid rgba(0,255,231,0.25);
+  border-radius: 6px;
+  width: 38px;
+  height: 38px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+
+.hamburger span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: var(--cyan);
+  border-radius: 1px;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+/* ── Mobile layout ──────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .hamburger {
+    display: flex;
+  }
+
+  .sidebar-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    z-index: 40;
+    width: min(var(--sidebar-w), 85vw);
+    transform: translateX(0);
+    box-shadow: 4px 0 32px rgba(0,0,0,0.6);
+  }
+
+  .sidebar-wrapper.closed {
+    transform: translateX(-105%);
+  }
+
+  .canvas-wrapper {
+    width: 100%;
+  }
+}
+
+/* ── Fonts (loaded via index.html or @import) ──────────────────────────────── */
+/* If not in your index.html already, add:
+   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+*/

@@ -1,0 +1,323 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #020408;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Star field ── */
+.starfield {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.star {
+  position: absolute;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0;
+  animation: twinkle var(--dur, 3s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.8); }
+  50%       { opacity: 0.9; transform: scale(1.2); }
+}
+
+/* ── Nebula glows ── */
+.nebula1 {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  left: -150px;
+  top: -100px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56,189,248,0.07) 0%, transparent 70%);
+  pointer-events: none;
+  animation: drift1 12s ease-in-out infinite alternate;
+}
+
+.nebula2 {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  right: -100px;
+  bottom: -80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(167,139,250,0.08) 0%, transparent 70%);
+  pointer-events: none;
+  animation: drift2 14s ease-in-out infinite alternate;
+}
+
+@keyframes drift1 {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(40px, 30px) scale(1.1); }
+}
+
+@keyframes drift2 {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(-30px, -20px) scale(1.08); }
+}
+
+/* ── Content ── */
+.content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 2rem;
+  text-align: center;
+  animation: riseIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Logo ── */
+.logoWrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  animation: riseIn 0.9s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.logoIcon {
+  font-size: 2rem;
+  color: var(--gold);
+  line-height: 1;
+  margin-top: 0.3rem;
+  filter: drop-shadow(0 0 12px var(--gold));
+  animation: pulse 3s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { filter: drop-shadow(0 0 8px var(--gold)); }
+  50%       { filter: drop-shadow(0 0 20px var(--gold)); }
+}
+
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: clamp(2.8rem, 8vw, 5rem);
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  color: #fff;
+  text-align: left;
+  text-shadow: 0 0 40px rgba(56,189,248,0.3);
+}
+
+.logoAccent {
+  color: var(--cyan);
+  text-shadow: 0 0 30px var(--cyan);
+}
+
+/* ── Tagline ── */
+.tagline {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(1.1rem, 3vw, 1.5rem);
+  color: rgba(255,255,255,0.85);
+  line-height: 1.5;
+  animation: riseIn 0.9s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.tagline em {
+  font-style: normal;
+  color: var(--cyan);
+}
+
+.sub {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.4);
+  letter-spacing: 0.05em;
+  animation: riseIn 0.9s 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Search ── */
+.searchRow {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 460px;
+  animation: riseIn 0.9s 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.inputWrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(0,255,231,0.25);
+  border-radius: 6px;
+  padding: 0 0.75rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.inputWrap:focus-within {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(0,255,231,0.12);
+}
+
+.atSign {
+  font-family: 'Space Mono', monospace;
+  color: var(--cyan);
+  font-size: 0.9rem;
+  margin-right: 0.35rem;
+}
+
+.input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.9rem;
+  padding: 0.7rem 0;
+  caret-color: var(--cyan);
+}
+
+.input::placeholder {
+  color: rgba(255,255,255,0.25);
+}
+
+.btn {
+  background: var(--cyan);
+  color: #020408;
+  border: none;
+  border-radius: 6px;
+  padding: 0 1.2rem;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.2s, transform 0.1s, box-shadow 0.2s;
+  box-shadow: 0 0 16px rgba(0,255,231,0.3);
+  min-width: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+}
+
+.btn:hover:not(:disabled) {
+  opacity: 0.88;
+  transform: translateY(-1px);
+  box-shadow: 0 0 24px rgba(0,255,231,0.5);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.arrow {
+  transition: transform 0.2s;
+}
+
+.btn:hover .arrow {
+  transform: translateX(3px);
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0,0,0,0.3);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Demo chips ── */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  animation: riseIn 0.9s 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.tryLabel {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.3);
+}
+
+.chip {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 99px;
+  color: rgba(255,255,255,0.6);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.72rem;
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.chip:hover:not(:disabled) {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(0,255,231,0.06);
+}
+
+/* ── Feature pills ── */
+.features {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+  animation: riseIn 0.9s 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.featurePill {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 4px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.62rem;
+  color: rgba(255,255,255,0.25);
+  padding: 0.2rem 0.55rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ── Mobile ── */
+@media (max-width: 480px) {
+  .searchRow {
+    flex-direction: column;
+  }
+
+  .btn {
+    padding: 0.7rem;
+    justify-content: center;
+  }
+
+  .logo {
+    font-size: 3rem;
+  }
+}

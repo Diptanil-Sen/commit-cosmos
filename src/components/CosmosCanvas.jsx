@@ -1,133 +1,204 @@
-import { useEffect, useRef, useCallback } from 'react'
-import { generateBgStars, drawFrame, updateUniverse, screenToWorld } from '../utils/renderer'
+import { useEffect, useRef, useCallback } from 'react';
+import { drawFrame, updateUniverse, generateBgStars } from '../utils/renderer';
+import { pingCommit } from '../utils/soundEngine';
 
-const BG_STARS = generateBgStars(500)
-
-export default function CosmosCanvas({ sunRef, planetsRef, onHover, onCanvasSize }) {
-  const canvasRef = useRef(null)
-  const camRef = useRef({ x: 0, y: 0, z: 0.7, targetZ: 0.7 })
-  const dragRef = useRef(null)
-  const rafRef = useRef(null)
-  const lastTRef = useRef(0)
+export default function CosmosCanvas({
+  sun,
+  planets,
+  speed = 1,
+  onTooltip,
+  onCommitFlash,
+  screenshotRef,
+}) {
+  const canvasRef = useRef(null);
+  const stateRef = useRef({
+    sun: null,
+    planets: [],
+    bgStars: generateBgStars(500),
+    camX: 0,
+    camY: 0,
+    camZ: 1,
+    targetZ: 1,
+    dragging: false,
+    lastX: 0,
+    lastY: 0,
+    lastTime: null,
+    speed: 1,
+  });
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    const resize = () => {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
-      onCanvasSize?.(window.innerWidth, window.innerHeight)
+    if (screenshotRef) {
+      screenshotRef.current = () => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const link = document.createElement('a');
+        const user = stateRef.current.sun?.name || 'cosmos';
+        link.download = `commit-cosmos-${user}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      };
     }
-    resize()
-    window.addEventListener('resize', resize)
-    return () => window.removeEventListener('resize', resize)
-  }, [])
+  }, [screenshotRef]);
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    const ctx = canvas.getContext('2d')
+    stateRef.current.speed = speed;
+  }, [speed]);
 
-    const loop = (now) => {
-      rafRef.current = requestAnimationFrame(loop)
-      const dt = Math.min(now - lastTRef.current, 60)
-      lastTRef.current = now
-      const cam = camRef.current
-      cam.z += (cam.targetZ - cam.z) * 0.08
+  useEffect(() => {
+    stateRef.current.sun = sun ?? null;
+    stateRef.current.planets = planets ?? [];
+    if (sun) {
+      stateRef.current.camX = 0;
+      stateRef.current.camY = 0;
+      stateRef.current.camZ = 1;
+      stateRef.current.targetZ = 1;
+    }
+  }, [sun, planets]);
 
-      if (sunRef.current && planetsRef.current.length) {
-        updateUniverse(sunRef.current, planetsRef.current, dt)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let raf;
+
+    function resize() {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+    }
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(canvas);
+
+    function loop(ts) {
+      const s = stateRef.current;
+      const dt = Math.min((ts - (s.lastTime ?? ts)), 50) * s.speed;
+      s.lastTime = ts;
+      s.camZ += (s.targetZ - s.camZ) * 0.1;
+      if (s.sun && s.planets.length) {
+        updateUniverse(s.sun, s.planets, dt);
       }
-
-      drawFrame(
-        ctx,
-        canvas.width,
-        canvas.height,
-        sunRef.current,
-        planetsRef.current,
-        BG_STARS,
-        cam.x, cam.y, cam.z
-      )
+      drawFrame(ctx, canvas.width, canvas.height, s.sun, s.planets, s.bgStars, s.camX, s.camY, s.camZ);
+      raf = requestAnimationFrame(loop);
     }
 
-    rafRef.current = requestAnimationFrame(loop)
-    return () => cancelAnimationFrame(rafRef.current)
-  }, [])
+    raf = requestAnimationFrame(loop);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    window.__cosmos_zoom = (factor) => {
+      stateRef.current.targetZ = Math.min(5, Math.max(0.1, stateRef.current.targetZ * factor));
+    };
+    window.__cosmos_reset_cam = () => {
+      stateRef.current.camX = 0;
+      stateRef.current.camY = 0;
+      stateRef.current.targetZ = 1;
+    };
+    window.__cosmos_focus_planet = (planet) => {
+      if (!planet) return;
+      stateRef.current.targetZ = 2.5;
+      stateRef.current.camX = -(planet.x ?? 0);
+      stateRef.current.camY = -(planet.y ?? 0);
+    };
+  }, []);
 
   const handleMouseDown = useCallback((e) => {
-    if (e.button !== 0) return
-    const cam = camRef.current
-    dragRef.current = {
-      startX: e.clientX, startY: e.clientY,
-      camX: cam.x, camY: cam.y,
-    }
-  }, [])
+    stateRef.current.dragging = true;
+    stateRef.current.lastX = e.clientX;
+    stateRef.current.lastY = e.clientY;
+  }, []);
 
   const handleMouseMove = useCallback((e) => {
-    const canvas = canvasRef.current
-    const cam = camRef.current
-
-    if (dragRef.current) {
-      cam.x = dragRef.current.camX + (e.clientX - dragRef.current.startX)
-      cam.y = dragRef.current.camY + (e.clientY - dragRef.current.startY)
+    const s = stateRef.current;
+    if (s.dragging) {
+      s.camX += (e.clientX - s.lastX) / s.camZ;
+      s.camY += (e.clientY - s.lastY) / s.camZ;
+      s.lastX = e.clientX;
+      s.lastY = e.clientY;
+    } else {
+      const canvas = canvasRef.current;
+      if (!canvas || !s.sun) return;
+      const rect = canvas.getBoundingClientRect();
+      const mx = (e.clientX - rect.left - canvas.width / 2) / s.camZ - s.camX;
+      const my = (e.clientY - rect.top - canvas.height / 2) / s.camZ - s.camY;
+      const hit = hitTest(mx, my, s.sun, s.planets);
+      onTooltip?.(hit ? { x: e.clientX, y: e.clientY, ...hit } : null);
     }
+  }, [onTooltip]);
 
-    const { wx, wy } = screenToWorld(
-      e.clientX, e.clientY,
-      canvas.width, canvas.height,
-      cam.x, cam.y, cam.z
-    )
-
-    // Hit test planets
-    const hit = planetsRef.current.find(
-      p => Math.hypot(wx - p.x, wy - p.y) < p.r + 14
-    )
-    // Hit test sun
-    const sun = sunRef.current
-    const sunHit = sun && Math.hypot(wx - sun.x, wy - sun.y) < sun.r + 10
-    onHover(hit || (sunHit ? sun : null), e.clientX, e.clientY)
-  }, [onHover])
-
-  const handleMouseUp = useCallback(() => { dragRef.current = null }, [])
-  const handleMouseLeave = useCallback(() => {
-    dragRef.current = null
-    onHover(null)
-  }, [onHover])
+  const handleMouseUp = useCallback(() => {
+    stateRef.current.dragging = false;
+  }, []);
 
   const handleWheel = useCallback((e) => {
-    e.preventDefault()
-    const cam = camRef.current
-    cam.targetZ = Math.max(0.15, Math.min(5, cam.targetZ * (e.deltaY > 0 ? 0.88 : 1.14)))
-  }, [])
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.1 : 0.9;
+    stateRef.current.targetZ = Math.min(5, Math.max(0.1, stateRef.current.targetZ * factor));
+  }, []);
 
-  useEffect(() => {
-    const canvas = canvasRef.current
-    canvas.addEventListener('wheel', handleWheel, { passive: false })
-    return () => canvas.removeEventListener('wheel', handleWheel)
-  }, [handleWheel])
+  const touchRef = useRef({ dist: 0 });
 
-  useEffect(() => {
-    window.__cosmos_zoom = (f) => {
-      camRef.current.targetZ = Math.max(0.15, Math.min(5, camRef.current.targetZ * f))
+  const handleTouchStart = useCallback((e) => {
+    if (e.touches.length === 2) touchRef.current.dist = pinchDist(e.touches);
+    stateRef.current.lastX = e.touches[0].clientX;
+    stateRef.current.lastY = e.touches[0].clientY;
+  }, []);
+
+  const handleTouchMove = useCallback((e) => {
+    e.preventDefault();
+    const s = stateRef.current;
+    if (e.touches.length === 1) {
+      s.camX += (e.touches[0].clientX - s.lastX) / s.camZ;
+      s.camY += (e.touches[0].clientY - s.lastY) / s.camZ;
+      s.lastX = e.touches[0].clientX;
+      s.lastY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+      const newDist = pinchDist(e.touches);
+      const factor = newDist / (touchRef.current.dist || newDist);
+      s.targetZ = Math.min(5, Math.max(0.1, s.targetZ * factor));
+      touchRef.current.dist = newDist;
     }
-    window.__cosmos_reset_cam = () => {
-      camRef.current.x = 0
-      camRef.current.y = 0
-      camRef.current.targetZ = 0.7
-    }
-    window.__cosmos_focus_planet = (planet) => {
-      camRef.current.x = -planet.x * camRef.current.z
-      camRef.current.y = -planet.y * camRef.current.z
-      camRef.current.targetZ = 2.2
-    }
-  }, [])
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    touchRef.current.dist = 0;
+  }, []);
 
   return (
     <canvas
       ref={canvasRef}
-      style={{ position: 'fixed', inset: 0, cursor: 'crosshair' }}
+      style={{ width: '100%', height: '100%', display: 'block', cursor: 'grab', touchAction: 'none' }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseLeave}
+      onMouseLeave={handleMouseUp}
+      onWheel={handleWheel}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     />
-  )
+  );
+}
+
+function hitTest(mx, my, sun, planets) {
+  if (sun) {
+    const dx = mx - (sun.x ?? 0);
+    const dy = my - (sun.y ?? 0);
+    if (Math.sqrt(dx * dx + dy * dy) < (sun.r ?? 38) + 8) return { type: 'sun', data: sun };
+  }
+  for (const planet of planets ?? []) {
+    const dx = mx - (planet.x ?? 0);
+    const dy = my - (planet.y ?? 0);
+    if (Math.sqrt(dx * dx + dy * dy) < (planet.r ?? 10) + 6) return { type: 'planet', data: planet };
+  }
+  return null;
+}
+
+function pinchDist(touches) {
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.sqrt(dx * dx + dy * dy);
 }

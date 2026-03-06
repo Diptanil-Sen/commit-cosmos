@@ -1,3 +1,4 @@
+import HelpPanel from './components/HelpPanel'
 import { useEffect, useState, useRef } from 'react'
 import CosmosCanvas from './components/CosmosCanvas'
 import Sidebar from './components/Sidebar'
@@ -107,6 +108,7 @@ export default function App() {
           <Tooltip tooltip={tooltip} />
           <CommitFlash commit={flashMsg} />
           <ZoomControls />
+          <HelpPanel />
         </main>
       </div>
     </div>

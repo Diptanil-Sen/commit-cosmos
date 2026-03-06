@@ -1,14 +1,26 @@
-import { useState, useEffect, useRef } from 'react';
-import styles from './IntroScreen.module.css';
+import { useState, useEffect, useRef } from 'react'
+import styles from './IntroScreen.module.css'
 
-const DEMO_USERS = ['torvalds', 'gaearon', 'sindresorhus', 'Diptanil-Sen'];
+const DEMO_USERS = ['torvalds', 'gaearon', 'sindresorhus', 'Diptanil-Sen']
+
+const FEATURES = [
+  { icon: '🪐', title: 'Planets = Repos', desc: 'Size = star count' },
+  { icon: '🌙', title: 'Moons = Commits', desc: 'Every commit orbits its planet' },
+  { icon: '🌈', title: 'Language Nebulae', desc: 'Repos grouped by language glow in colored clouds' },
+  { icon: '☄️', title: 'Streak Comet', desc: 'Active commit streak spawns a flying comet' },
+  { icon: '🟢', title: 'Activity Rings', desc: 'Green = active repo, grey = dormant' },
+  { icon: '✦',  title: 'Constellation Mode', desc: 'Toggle lines connecting repos in creation order' },
+  { icon: '🖱️', title: 'Click a Planet', desc: 'Opens that repo on GitHub' },
+  { icon: '🔗', title: 'Shareable URL', desc: '?user=username — share your galaxy' },
+  { icon: '📸', title: 'Screenshot', desc: 'Save your cosmos as a PNG' },
+  { icon: '🔊', title: 'Sound', desc: 'Each planet has a unique tonal ping' },
+]
 
 export default function IntroScreen({ onSearch, loading }) {
-  const [input, setInput] = useState('');
-  const [stars, setStars] = useState([]);
-  const inputRef = useRef(null);
+  const [input, setInput] = useState('')
+  const [stars, setStars] = useState([])
+  const inputRef = useRef(null)
 
-  // Generate random star positions once
   useEffect(() => {
     const s = Array.from({ length: 120 }, (_, i) => ({
       id: i,
@@ -17,43 +29,38 @@ export default function IntroScreen({ onSearch, loading }) {
       size: Math.random() * 2.5 + 0.5,
       delay: Math.random() * 4,
       dur: Math.random() * 3 + 2,
-    }));
-    setStars(s);
-    // Auto-focus input
-    setTimeout(() => inputRef.current?.focus(), 600);
-  }, []);
+    }))
+    setStars(s)
+    setTimeout(() => inputRef.current?.focus(), 600)
+  }, [])
 
   function handleSubmit() {
-    const u = input.trim();
-    if (!u) return;
-    onSearch(u);
+    const u = input.trim()
+    if (!u) return
+    onSearch(u)
   }
 
   function handleKey(e) {
-    if (e.key === 'Enter') handleSubmit();
+    if (e.key === 'Enter') handleSubmit()
   }
 
   return (
     <div className={styles.overlay}>
-      {/* Animated star field */}
+      {/* Star field */}
       <div className={styles.starfield} aria-hidden="true">
         {stars.map(s => (
           <span
             key={s.id}
             className={styles.star}
             style={{
-              left: `${s.x}%`,
-              top: `${s.y}%`,
-              width: `${s.size}px`,
-              height: `${s.size}px`,
-              animationDelay: `${s.delay}s`,
-              animationDuration: `${s.dur}s`,
+              left: `${s.x}%`, top: `${s.y}%`,
+              width: `${s.size}px`, height: `${s.size}px`,
+              animationDelay: `${s.delay}s`, animationDuration: `${s.dur}s`,
             }}
           />
         ))}
       </div>
 
-      {/* Glowing nebula blobs */}
       <div className={styles.nebula1} aria-hidden="true" />
       <div className={styles.nebula2} aria-hidden="true" />
 
@@ -70,10 +77,6 @@ export default function IntroScreen({ onSearch, loading }) {
         <p className={styles.tagline}>
           Your entire GitHub history —<br />
           <em>as a living solar system.</em>
-        </p>
-
-        <p className={styles.sub}>
-          Every repo orbits as a planet. Every commit, a moon.
         </p>
 
         {/* Search */}
@@ -97,11 +100,7 @@ export default function IntroScreen({ onSearch, loading }) {
             onClick={handleSubmit}
             disabled={loading || !input.trim()}
           >
-            {loading ? (
-              <span className={styles.spinner} />
-            ) : (
-              <>EXPLORE <span className={styles.arrow}>→</span></>
-            )}
+            {loading ? <span className={styles.spinner} /> : <>EXPLORE <span className={styles.arrow}>→</span></>}
           </button>
         </div>
 
@@ -109,24 +108,26 @@ export default function IntroScreen({ onSearch, loading }) {
         <div className={styles.chips}>
           <span className={styles.tryLabel}>try →</span>
           {DEMO_USERS.map(u => (
-            <button
-              key={u}
-              className={styles.chip}
-              onClick={() => onSearch(u)}
-              disabled={loading}
-            >
-              {u}
-            </button>
+            <button key={u} className={styles.chip} onClick={() => onSearch(u)} disabled={loading}>{u}</button>
           ))}
         </div>
 
-        {/* Feature pills */}
-        <div className={styles.features}>
-          {['Orbital physics', 'Commit history', 'Shareable URL', 'Screenshot', 'Realtime'].map(f => (
-            <span key={f} className={styles.featurePill}>{f}</span>
-          ))}
+        {/* Feature grid */}
+        <div className={styles.featureSection}>
+          <div className={styles.featureDivider}>
+            <span>WHAT YOU'LL SEE</span>
+          </div>
+          <div className={styles.featureGrid}>
+            {FEATURES.map(f => (
+              <div key={f.title} className={styles.featureCard}>
+                <span className={styles.featureIcon}>{f.icon}</span>
+                <div className={styles.featureTitle}>{f.title}</div>
+                <div className={styles.featureDesc}>{f.desc}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
-  );
+  )
 }

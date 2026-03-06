@@ -1,162 +1,122 @@
 import { useState, useRef } from 'react'
 import styles from './Sidebar.module.css'
 
-const QUICK = [
-  'facebook/react',
-  'vuejs/vue',
-  'vercel/next.js',
-  'microsoft/vscode',
-  'torvalds/linux',
-  'denoland/deno',
-  'sveltejs/svelte',
-  'golang/go',
-]
+const DEMOS = ['torvalds', 'gaearon', 'sindresorhus', 'tj', 'Diptanil-Sen']
 
-export default function Sidebar({ systems, loading, error, onAdd, onRemove, onFocus, allCommits }) {
+export default function Sidebar({ sun, planets, loading, error, onLoad, username }) {
   const [input, setInput] = useState('')
-  const inputRef = useRef(null)
-
-  const totalStars = systems.reduce((a, s) => a + (s.meta.stargazers_count || 0), 0)
 
   const handleSubmit = () => {
-    if (!input.trim()) return
-    onAdd(input)
-    setInput('')
+    const u = input.trim().replace(/^@/, '')
+    if (u) { onLoad(u); setInput('') }
   }
 
-  const handleKey = (e) => {
-    if (e.key === 'Enter') handleSubmit()
-  }
-
-  const handleQuick = (slug) => {
-    setInput(slug)
-    onAdd(slug)
-  }
-
-  const formatStars = (n) => {
-    if (n >= 1000) return (n / 1000).toFixed(1) + 'k'
-    return n.toString()
-  }
+  const totalCommits = planets.reduce((a, p) => a + p.commits.length, 0)
+  const totalStars = planets.reduce((a, p) => a + p.stars, 0)
+  const fmt = n => n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n)
 
   return (
     <aside className={styles.sidebar}>
-      {/* Header */}
       <div className={styles.head}>
-        <div className={styles.logo}>
-          <span className={styles.logoIcon}>✦</span>
-          <div>
-            <div className={styles.logoTitle}>COMMIT<br />COSMOS</div>
-            <div className={styles.logoSub}>Any repo · as a living universe</div>
-          </div>
+        <div className={styles.logoIcon}>✦</div>
+        <div>
+          <div className={styles.logoTitle}>COMMIT<br />COSMOS</div>
+          <div className={styles.logoSub}>Any GitHub user · as a solar system</div>
         </div>
       </div>
 
-      {/* Add Repo */}
       <div className={styles.addSection}>
         <div className={styles.sectionLabel}>
-          <span className={styles.labelLine} />
-          Add Repository
+          <span className={styles.line} /> Enter GitHub Username
         </div>
-
         <div className={styles.inputWrap}>
-          <span className={styles.inputIcon}>⌗</span>
+          <span className={styles.at}>@</span>
           <input
-            ref={inputRef}
             className={styles.input}
             value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyDown={handleKey}
-            placeholder="owner / repo or GitHub URL"
+            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+            placeholder="username"
             spellCheck={false}
             autoComplete="off"
           />
-          <button
-            className={styles.addBtn}
-            onClick={handleSubmit}
-            disabled={!!loading}
-          >
-            {loading ? <span className={styles.miniSpin} /> : '→'}
+          <button className={styles.goBtn} onClick={handleSubmit} disabled={loading}>
+            {loading ? <span className={styles.spin} /> : '→'}
           </button>
         </div>
-
         {error && <div className={styles.error}>⚠ {error}</div>}
-        {loading && <div className={styles.loadingText}>Charting {loading}…</div>}
+        {loading && <div className={styles.loadingText}>Charting the cosmos…</div>}
 
-        {/* Quick Add */}
-        <div className={styles.quickLabel}>Popular repos</div>
+        <div className={styles.demoLabel}>Try these</div>
         <div className={styles.chips}>
-          {QUICK.map(slug => (
-            <button
-              key={slug}
-              className={styles.chip}
-              onClick={() => handleQuick(slug)}
-              disabled={!!loading || !!systems.find(s => s.id === slug)}
-            >
-              {slug.split('/')[1]}
+          {DEMOS.map(u => (
+            <button key={u} className={styles.chip} onClick={() => onLoad(u)} disabled={loading}>
+              {u}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Star Systems List */}
-      <div className={styles.systemsList}>
-        {systems.length === 0 ? (
-          <div className={styles.emptyList}>
-            <div className={styles.emptyIcon}>◎</div>
-            <div>No star systems yet.<br />Add a repo to begin.</div>
-          </div>
-        ) : (
-          <>
-            <div className={styles.sectionLabel} style={{ padding: '0 20px 10px' }}>
-              <span className={styles.labelLine} />
-              Star Systems
+      {sun && (
+        <>
+          <div className={styles.userCard}>
+            <div className={styles.sunDot} />
+            <div className={styles.userInfo}>
+              <div className={styles.userName}>{sun.displayName}</div>
+              <div className={styles.userHandle}>@{sun.name}</div>
+              {sun.bio && <div className={styles.userBio}>{sun.bio.slice(0, 70)}</div>}
             </div>
-            {systems.map(sys => (
+          </div>
+
+          <div className={styles.planetList}>
+            <div className={styles.sectionLabel} style={{ padding: '0 20px 8px' }}>
+              <span className={styles.line} /> {planets.length} Planets
+            </div>
+            {planets.map(p => (
               <div
-                key={sys.id}
-                className={styles.sysItem}
-                style={{ '--c': sys.color }}
-                onClick={() => onFocus(sys)}
+                key={p.id}
+                className={styles.planetItem}
+                style={{ '--c': p.color }}
+                onClick={() => window.__cosmos_focus_planet?.(p)}
               >
-                <div className={styles.sysDot} />
-                <div className={styles.sysInfo}>
-                  <div className={styles.sysName}>{sys.full}</div>
-                  <div className={styles.sysMeta}>
-                    <span style={{ color: sys.color }}>{sys.language}</span>
+                <div className={styles.planetDot} />
+                <div className={styles.planetInfo}>
+                  <div className={styles.planetName}>{p.name}</div>
+                  <div className={styles.planetMeta}>
+                    <span style={{ color: p.color }}>{p.language}</span>
                     <span>·</span>
-                    <span>{sys.commits.length} commits</span>
+                    <span>{p.moons.length} moons</span>
                     <span>·</span>
-                    <span>★ {formatStars(sys.meta.stargazers_count || 0)}</span>
+                    <span>★ {fmt(p.stars)}</span>
                   </div>
                 </div>
-                <button
-                  className={styles.removeBtn}
-                  onClick={e => { e.stopPropagation(); onRemove(sys.id) }}
-                  title="Remove"
-                >
-                  ✕
-                </button>
               </div>
             ))}
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )}
 
-      {/* Stats Footer */}
+      {!sun && !loading && (
+        <div className={styles.empty}>
+          <div className={styles.emptyIcon}>◎</div>
+          <div>Enter a GitHub username<br />to birth their solar system</div>
+        </div>
+      )}
+
       <div className={styles.statsBar}>
         <div className={styles.stat}>
-          <div className={styles.statN}>{systems.length}</div>
-          <div className={styles.statL}>Repos</div>
+          <div className={styles.statN}>{planets.length}</div>
+          <div className={styles.statL}>Planets</div>
         </div>
         <div className={styles.statDiv} />
         <div className={styles.stat}>
-          <div className={styles.statN}>{allCommits.length.toLocaleString()}</div>
+          <div className={styles.statN}>{totalCommits.toLocaleString()}</div>
           <div className={styles.statL}>Commits</div>
         </div>
         <div className={styles.statDiv} />
         <div className={styles.stat}>
-          <div className={styles.statN}>{formatStars(totalStars)}</div>
-          <div className={styles.statL}>Total ★</div>
+          <div className={styles.statN}>{fmt(totalStars)}</div>
+          <div className={styles.statL}>Stars</div>
         </div>
       </div>
     </aside>

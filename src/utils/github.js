@@ -6,36 +6,38 @@ async function ghFetch(url) {
   })
   if (!res.ok) {
     if (res.status === 403) throw new Error('GitHub rate limit hit. Wait ~60s and retry.')
-    if (res.status === 404) throw new Error('Repository not found.')
+    if (res.status === 404) throw new Error('User not found.')
     throw new Error(`GitHub error: ${res.status}`)
   }
   return res.json()
 }
 
-export async function fetchRepo(slug) {
-  // Accept full URLs or owner/repo
-  const clean = slug
-    .replace(/^https?:\/\/(www\.)?github\.com\//, '')
-    .replace(/\/$/, '')
-    .trim()
+export async function fetchUniverse(username) {
+  const user = await ghFetch(`${BASE}/users/${username}`)
 
-  if (!clean.includes('/')) throw new Error('Use format: owner/repo')
+  const repos = await ghFetch(
+    `${BASE}/users/${username}/repos?per_page=100&sort=pushed`
+  )
 
-  const [meta, commits] = await Promise.all([
-    ghFetch(`${BASE}/repos/${clean}`),
-    ghFetch(`${BASE}/repos/${clean}/commits?per_page=100`)
-  ])
+  // Pick top 15 by stars
+  const topRepos = repos
+    .filter(r => !r.fork)
+    .sort((a, b) => b.stargazers_count - a.stargazers_count)
+    .slice(0, 15)
 
-  return { meta, commits }
-}
+  // Fetch commits for each repo in parallel
+  const repoData = await Promise.all(
+    topRepos.map(async repo => {
+      try {
+        const commits = await ghFetch(
+          `${BASE}/repos/${username}/${repo.name}/commits?per_page=100&author=${username}`
+        )
+        return { repo, commits }
+      } catch {
+        return { repo, commits: [] }
+      }
+    })
+  )
 
-export function parseCommits(rawCommits, repoName, color) {
-  return rawCommits.map(c => ({
-    sha: c.sha.slice(0, 7),
-    repo: repoName,
-    msg: c.commit.message.split('\n')[0].slice(0, 72),
-    date: new Date(c.commit.author.date),
-    author: c.commit.author.name,
-    color,
-  }))
+  return { user, repoData }
 }

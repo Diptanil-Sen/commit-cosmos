@@ -5,10 +5,13 @@ import { buildUniverse } from '../utils/renderer'
 export function useCosmosStore() {
   const [sun, setSun] = useState(null)
   const [planets, setPlanets] = useState([])
+  const [asteroids, setAsteroids] = useState([])
+  const [constellation, setConstellation] = useState([])
+  const [nebulaClouds, setNebulaClouds] = useState([])
+  const [comet, setComet] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [username, setUsername] = useState('')
-
   const sunRef = useRef(null)
   const planetsRef = useRef([])
 
@@ -20,11 +23,15 @@ export function useCosmosStore() {
     setUsername(u)
     try {
       const { user: userData, repoData } = await fetchUniverse(u)
-      const { sun: newSun, planets: newPlanets } = buildUniverse(userData, repoData)
-      sunRef.current = newSun
-      planetsRef.current = newPlanets
-      setSun(newSun)
-      setPlanets(newPlanets)
+      const result = buildUniverse(userData, repoData)
+      sunRef.current = result.sun
+      planetsRef.current = result.planets
+      setSun(result.sun)
+      setPlanets(result.planets)
+      setAsteroids(result.asteroids || [])
+      setConstellation(result.constellation || [])
+      setNebulaClouds(result.nebulaClouds || [])
+      setComet(result.comet || null)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -35,7 +42,7 @@ export function useCosmosStore() {
   const clearError = useCallback(() => setError(''), [])
 
   return {
-    sun, planets,
+    sun, planets, asteroids, constellation, nebulaClouds, comet,
     sunRef, planetsRef,
     loading, error, username,
     loadUser, clearError,

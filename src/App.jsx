@@ -1,93 +1,74 @@
-import { useEffect, useState, useRef } from 'react';
-import CosmosCanvas from './components/CosmosCanvas';
-import Sidebar from './components/Sidebar';
-import Timeline from './components/Timeline';
-import Tooltip from './components/Tooltip';
-import CommitFlash from './components/CommitFlash';
-import ZoomControls from './components/ZoomControls';
-import IntroScreen from './components/IntroScreen';
-import { useCosmosStore } from './hooks/useCosmosStore';
-import { setSoundEnabled, isSoundEnabled } from './utils/soundEngine';
-import './index.css';
+import { useEffect, useState, useRef } from 'react'
+import CosmosCanvas from './components/CosmosCanvas'
+import Sidebar from './components/Sidebar'
+import Tooltip from './components/Tooltip'
+import CommitFlash from './components/CommitFlash'
+import ZoomControls from './components/ZoomControls'
+import IntroScreen from './components/IntroScreen'
+import { useCosmosStore } from './hooks/useCosmosStore'
+import { setSoundEnabled } from './utils/soundEngine'
+import './index.css'
 
 export default function App() {
-  const { sun, planets, loading, error, loadUser } = useCosmosStore();
+  const { sun, planets, asteroids, constellation, nebulaClouds, comet, loading, error, loadUser } = useCosmosStore()
 
-  // Speed multiplier: 1 = normal, 0.1 = slow, 5 = fast
-  const [speed, setSpeed] = useState(1);
+  const [speed, setSpeed] = useState(1)
+  const [soundOn, setSoundOn] = useState(false)
+  const [tooltip, setTooltip] = useState(null)
+  const [flashMsg, setFlashMsg] = useState(null)
+  const [showConstellation, setShowConstellation] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [showIntro, setShowIntro] = useState(true)
+  const screenshotRef = useRef(null)
 
-  // Sound toggle
-  const [soundOn, setSoundOn] = useState(false);
-
-  // Tooltip state
-  const [tooltip, setTooltip] = useState(null); // { x, y, planet | sun }
-
-  // Commit flash state
-  const [flashMsg, setFlashMsg] = useState(null);
-
-  // Screenshot trigger — we pass a ref callback down to CosmosCanvas
-  const screenshotRef = useRef(null);
-
-  // Sidebar mobile collapse
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-
-  // Intro screen — shown until user first searches
-  const [showIntro, setShowIntro] = useState(true);
-
-  // ── Shareable URLs ──────────────────────────────────────────────────────────
-  // On mount: read ?user= from URL and auto-load
+  // Shareable URL on load
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const urlUser = params.get('user');
+    const params = new URLSearchParams(window.location.search)
+    const urlUser = params.get('user')
     if (urlUser) {
-      setShowIntro(false);
-      loadUser(urlUser);
+      setShowIntro(false)
+      loadUser(urlUser)
     }
-  }, []);
+  }, [])
 
-  // When a user is loaded, push their name into the URL so it's shareable
+  // Push URL when user loads
   useEffect(() => {
-    if (sun?.login) {
-      const url = new URL(window.location.href);
-      url.searchParams.set('user', sun.login);
-      window.history.replaceState({}, '', url.toString());
-      setShowIntro(false);
+    if (sun?.name) {
+      const url = new URL(window.location.href)
+      url.searchParams.set('user', sun.name)
+      window.history.replaceState({}, '', url.toString())
+      setShowIntro(false)
     }
-  }, [sun?.login]);
+  }, [sun?.name])
 
-  // ── Sound toggle ─────────────────────────────────────────────────────────
   function handleSoundToggle() {
-    const next = !soundOn;
-    setSoundOn(next);
-    setSoundEnabled(next);
+    const next = !soundOn
+    setSoundOn(next)
+    setSoundEnabled(next)
   }
 
-  // ── Screenshot ──────────────────────────────────────────────────────────────
   function handleScreenshot() {
-    if (screenshotRef.current) {
-      screenshotRef.current(); // triggers download inside CosmosCanvas
-    }
+    screenshotRef.current?.()
   }
 
-  // ── Handle search from Sidebar or Intro ─────────────────────────────────────
   function handleSearch(username) {
-    setShowIntro(false);
-    loadUser(username);
+    setShowIntro(false)
+    loadUser(username)
+  }
+
+  function copyShareLink() {
+    if (!sun?.name) return
+    const url = new URL(window.location.href)
+    url.searchParams.set('user', sun.name)
+    navigator.clipboard.writeText(url.toString())
   }
 
   return (
     <div className="app-shell">
-      {/* Animated intro — fades out once user searches */}
       {showIntro && <IntroScreen onSearch={handleSearch} loading={loading} />}
 
-      {/* Main layout: sidebar + canvas */}
       <div className={`main-layout ${showIntro ? 'hidden' : ''}`}>
-        {/* Mobile hamburger */}
-        <button
-          className="hamburger"
-          onClick={() => setSidebarOpen(o => !o)}
-          aria-label="Toggle sidebar"
-        >
+        <button className="hamburger" onClick={() => setSidebarOpen(o => !o)} aria-label="Toggle sidebar">
           <span /><span /><span />
         </button>
 
@@ -103,6 +84,9 @@ export default function App() {
             soundOn={soundOn}
             onSoundToggle={handleSoundToggle}
             onScreenshot={handleScreenshot}
+            onShareLink={copyShareLink}
+            showConstellation={showConstellation}
+            onConstellationToggle={() => setShowConstellation(v => !v)}
           />
         </aside>
 
@@ -110,17 +94,21 @@ export default function App() {
           <CosmosCanvas
             sun={sun}
             planets={planets}
+            asteroids={asteroids}
+            constellation={constellation}
+            nebulaClouds={nebulaClouds}
+            comet={comet}
             speed={speed}
+            showConstellation={showConstellation}
             onTooltip={setTooltip}
             onCommitFlash={setFlashMsg}
             screenshotRef={screenshotRef}
           />
-
           <Tooltip tooltip={tooltip} />
-          <CommitFlash message={flashMsg} onDone={() => setFlashMsg(null)} />
+          <CommitFlash commit={flashMsg} />
           <ZoomControls />
         </main>
       </div>
     </div>
-  );
+  )
 }

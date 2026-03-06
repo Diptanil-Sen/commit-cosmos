@@ -115,6 +115,12 @@ export default function Sidebar({
           </div>
         </div>
       )}
+    <div className={styles.footer}>
+        <button className={styles.homeBtn} onClick={() => window.location.href = '/'}>
+          ✦ back to home
+        </button>
+        <span className={styles.madeBy}>made by <a href="https://github.com/Diptanil-Sen" target="_blank" rel="noreferrer">Diptanil Sen</a></span>
+      </div>
     </div>
   )
 }

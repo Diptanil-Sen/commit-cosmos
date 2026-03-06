@@ -1,0 +1,112 @@
+.wrap {
+  position: fixed;
+  left: 290px;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.inner {
+  text-align: center;
+  position: relative;
+  pointer-events: all;
+}
+
+.orbs {
+  position: absolute;
+  inset: -80px;
+  pointer-events: none;
+}
+
+.orb1, .orb2, .orb3 {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  animation: float 8s ease-in-out infinite;
+}
+
+.orb1 {
+  width: 200px; height: 200px;
+  background: rgba(56, 189, 248, 0.07);
+  top: 0; left: 50%;
+  transform: translateX(-50%);
+}
+
+.orb2 {
+  width: 160px; height: 160px;
+  background: rgba(167, 139, 250, 0.06);
+  bottom: 0; left: 20%;
+  animation-delay: -3s;
+}
+
+.orb3 {
+  width: 140px; height: 140px;
+  background: rgba(52, 211, 153, 0.05);
+  bottom: 20%; right: 10%;
+  animation-delay: -5s;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) translateX(-50%); }
+  50% { transform: translateY(-20px) translateX(-50%); }
+}
+
+.icon {
+  font-size: 2.5rem;
+  color: var(--blue);
+  text-shadow: 0 0 30px rgba(56, 189, 248, 0.7);
+  margin-bottom: 16px;
+  animation: pulse 3s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+.title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.5rem;
+  background: linear-gradient(135deg, white, var(--blue));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 12px;
+}
+
+.body {
+  font-size: 0.75rem;
+  color: var(--text-2);
+  line-height: 1.8;
+  margin-bottom: 24px;
+}
+
+.examples {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.exBtn {
+  padding: 8px 16px;
+  background: rgba(56, 189, 248, 0.07);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 5px;
+  color: var(--blue);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  transition: all 0.18s;
+}
+
+.exBtn:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: var(--blue);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.2);
+  transform: translateY(-1px);
+}

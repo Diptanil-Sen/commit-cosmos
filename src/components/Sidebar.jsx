@@ -8,13 +8,22 @@ export default function Sidebar({
   speed, onSpeedChange, soundOn, onSoundToggle,
   onScreenshot, onShareLink,
   showConstellation, onConstellationToggle,
+  onCompare,
 }) {
   const [input, setInput] = useState('')
+  const [compareInput, setCompareInput] = useState('')
 
   function handleSubmit() {
     const u = input.trim()
     if (!u) return
     onSearch(u)
+  }
+
+  function handleCompare() {
+    const u = compareInput.trim()
+    if (!u) return
+    onCompare(u)
+    setCompareInput('')
   }
 
   const totalCommits = planets.reduce((acc, p) => acc + (p.moons?.length || 0), 0)
@@ -59,6 +68,28 @@ export default function Sidebar({
         {error && <p className={styles.error}>{error}</p>}
       </div>
 
+      {/* Compare */}
+      {sun && (
+        <div className={styles.section}>
+          <label className={styles.sectionLabel}>— compare with</label>
+          <div className={styles.inputRow}>
+            <span className={styles.atSign}>@</span>
+            <input
+              className={styles.input}
+              placeholder="another username"
+              value={compareInput}
+              onChange={e => setCompareInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleCompare()}
+              autoComplete="off"
+              spellCheck="false"
+            />
+            <button className={`${styles.goBtn} ${styles.goBtnCompare}`} onClick={handleCompare} disabled={!compareInput.trim()}>
+              ⚡
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className={styles.section}>
         <label className={styles.sectionLabel}>— controls</label>
         <div className={styles.controlRow}>
@@ -80,7 +111,7 @@ export default function Sidebar({
 
       {sun && (
         <div className={styles.section}>
-          <label className={styles.sectionLabel}>— {planets.length} planets</label>
+          <label className={styles.sectionLabel}>— {planets.length} planets · click to focus</label>
           <div className={styles.planetList}>
             {planets.map(planet => (
               <button key={planet.name} className={styles.planetRow} onClick={() => window.__cosmos_focus_planet?.(planet)}>
@@ -115,7 +146,8 @@ export default function Sidebar({
           </div>
         </div>
       )}
-    <div className={styles.footer}>
+
+      <div className={styles.footer}>
         <button className={styles.homeBtn} onClick={() => window.location.href = '/'}>
           ✦ back to home
         </button>

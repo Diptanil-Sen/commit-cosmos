@@ -1,21 +1,27 @@
 import { useEffect, useRef, useCallback } from 'react'
-import { drawFrame, updateUniverse, generateBgStars } from '../utils/renderer'
+import {
+  drawFrame, updateUniverse, generateBgStars,
+  triggerSupernova, updateSupernova,
+  updateShootingStars,
+} from '../utils/renderer'
 import { pingCommit } from '../utils/soundEngine'
 
 export default function CosmosCanvas({
   sun, planets, asteroids = [], constellation = [], nebulaClouds = [], comet = null,
   speed = 1, showConstellation = false,
-  onTooltip, onCommitFlash, screenshotRef,
+  onTooltip, onCommitFlash, onPlanetClick, screenshotRef,
 }) {
   const canvasRef = useRef(null)
   const stateRef = useRef({
     sun: null, planets: [], asteroids: [], constellation: [],
     nebulaClouds: [], comet: null,
     bgStars: generateBgStars(500),
+    shootingStars: [],
     camX: 0, camY: 0, camZ: 1, targetZ: 1,
-    dragging: false, lastX: 0, lastY: 0,
+    dragging: false, dragMoved: false, lastX: 0, lastY: 0,
     lastTime: null, speed: 1,
     showConstellation: false,
+    supernovaDone: false,
   })
 
   // Screenshot
@@ -35,7 +41,7 @@ export default function CosmosCanvas({
   useEffect(() => { stateRef.current.speed = speed }, [speed])
   useEffect(() => { stateRef.current.showConstellation = showConstellation }, [showConstellation])
 
-  // Sync all props into stateRef
+  // Sync props, trigger supernova when new user loads
   useEffect(() => {
     stateRef.current.sun = sun ?? null
     stateRef.current.planets = planets ?? []
@@ -43,11 +49,13 @@ export default function CosmosCanvas({
     stateRef.current.constellation = constellation ?? []
     stateRef.current.nebulaClouds = nebulaClouds ?? []
     stateRef.current.comet = comet ?? null
-    if (sun) {
+    if (sun && planets?.length) {
       stateRef.current.camX = 0
       stateRef.current.camY = 0
       stateRef.current.camZ = 1
       stateRef.current.targetZ = 1
+      stateRef.current.supernovaDone = false
+      triggerSupernova(planets)
     }
   }, [sun, planets, asteroids, constellation, nebulaClouds, comet])
 
@@ -73,8 +81,15 @@ export default function CosmosCanvas({
       s.camZ += (s.targetZ - s.camZ) * 0.1
 
       if (s.sun && s.planets.length) {
+        if (!s.supernovaDone) {
+          s.supernovaDone = updateSupernova(s.planets, dt)
+        }
         updateUniverse(s.sun, s.planets, dt, s.asteroids, s.comet)
       }
+
+      // Collect commit messages for shooting stars
+      const msgs = s.planets.flatMap(p => p.moons.map(m => m.msg))
+      updateShootingStars(s.shootingStars, dt, msgs)
 
       drawFrame(ctx, canvas.width, canvas.height, s.sun, s.planets, s.bgStars, s.camX, s.camY, s.camZ, {
         showConstellation: s.showConstellation,
@@ -82,6 +97,7 @@ export default function CosmosCanvas({
         asteroids: s.asteroids,
         nebulaClouds: s.nebulaClouds,
         comet: s.comet,
+        shootingStars: s.shootingStars,
       })
 
       raf = requestAnimationFrame(loop)
@@ -109,56 +125,52 @@ export default function CosmosCanvas({
     }
   }, [])
 
-  // Click = open GitHub repo
-  const handleClick = useCallback((e) => {
+  const getHit = useCallback((e) => {
     const s = stateRef.current
-    if (!s.sun) return
+    if (!s.sun) return null
     const canvas = canvasRef.current
     const rect = canvas.getBoundingClientRect()
     const mx = (e.clientX - rect.left - canvas.width / 2) / s.camZ - s.camX
     const my = (e.clientY - rect.top - canvas.height / 2) / s.camZ - s.camY
-    const hit = hitTest(mx, my, s.sun, s.planets)
-    if (hit?.type === 'planet') {
-      window.open(`https://github.com/${hit.data.full}`, '_blank')
-    } else if (hit?.type === 'sun') {
-      window.open(`https://github.com/${hit.data.name}`, '_blank')
-    }
+    return hitTest(mx, my, s.sun, s.planets)
   }, [])
 
   const handleMouseDown = useCallback((e) => {
     stateRef.current.dragging = true
+    stateRef.current.dragMoved = false
     stateRef.current.lastX = e.clientX
     stateRef.current.lastY = e.clientY
-    stateRef.current.dragMoved = false
   }, [])
 
   const handleMouseMove = useCallback((e) => {
     const s = stateRef.current
     if (s.dragging) {
-      const dx = e.clientX - s.lastX
-      const dy = e.clientY - s.lastY
+      const dx = e.clientX - s.lastX, dy = e.clientY - s.lastY
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) s.dragMoved = true
       s.camX += dx / s.camZ
       s.camY += dy / s.camZ
       s.lastX = e.clientX
       s.lastY = e.clientY
     } else {
-      const canvas = canvasRef.current
-      if (!canvas || !s.sun) return
-      const rect = canvas.getBoundingClientRect()
-      const mx = (e.clientX - rect.left - canvas.width / 2) / s.camZ - s.camX
-      const my = (e.clientY - rect.top - canvas.height / 2) / s.camZ - s.camY
-      const hit = hitTest(mx, my, s.sun, s.planets)
+      const hit = getHit(e)
       onTooltip?.(hit ? { x: e.clientX, y: e.clientY, ...hit } : null)
-      canvas.style.cursor = hit ? 'pointer' : 'grab'
+      canvasRef.current.style.cursor = hit ? 'pointer' : 'grab'
     }
-  }, [onTooltip])
+  }, [onTooltip, getHit])
 
   const handleMouseUp = useCallback((e) => {
     const s = stateRef.current
-    if (!s.dragMoved) handleClick(e)
+    if (!s.dragMoved) {
+      const hit = getHit(e)
+      if (hit?.type === 'planet') {
+        // Open commit drawer
+        onPlanetClick?.(hit.data)
+      } else if (hit?.type === 'sun') {
+        window.open(`https://github.com/${hit.data.name}`, '_blank')
+      }
+    }
     s.dragging = false
-  }, [handleClick])
+  }, [getHit, onPlanetClick])
 
   const handleWheel = useCallback((e) => {
     e.preventDefault()
@@ -194,7 +206,7 @@ export default function CosmosCanvas({
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      onMouseLeave={() => { stateRef.current.dragging = false }}
+      onMouseLeave={() => { stateRef.current.dragging = false; onTooltip?.(null) }}
       onWheel={handleWheel}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}

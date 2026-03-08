@@ -1,17 +1,20 @@
-import HelpPanel from './components/HelpPanel'
 import { useEffect, useState, useRef } from 'react'
 import CosmosCanvas from './components/CosmosCanvas'
 import Sidebar from './components/Sidebar'
 import Tooltip from './components/Tooltip'
 import CommitFlash from './components/CommitFlash'
+import CommitDrawer from './components/CommitDrawer'
+import CompareView from './components/CompareView'
 import ZoomControls from './components/ZoomControls'
+import HelpPanel from './components/HelpPanel'
 import IntroScreen from './components/IntroScreen'
 import { useCosmosStore } from './hooks/useCosmosStore'
 import { setSoundEnabled } from './utils/soundEngine'
 import './index.css'
 
 export default function App() {
-  const { sun, planets, asteroids, constellation, nebulaClouds, comet, loading, error, loadUser } = useCosmosStore()
+  const main = useCosmosStore()
+  const compare = useCosmosStore()
 
   const [speed, setSpeed] = useState(1)
   const [soundOn, setSoundOn] = useState(false)
@@ -20,27 +23,27 @@ export default function App() {
   const [showConstellation, setShowConstellation] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [showIntro, setShowIntro] = useState(true)
+  const [compareMode, setCompareMode] = useState(false)
+  const [compareUsername, setCompareUsername] = useState('')
+  const [drawerPlanet, setDrawerPlanet] = useState(null)
   const screenshotRef = useRef(null)
 
-  // Shareable URL on load
+  // URL on load
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const urlUser = params.get('user')
-    if (urlUser) {
-      setShowIntro(false)
-      loadUser(urlUser)
-    }
+    if (urlUser) { setShowIntro(false); main.loadUser(urlUser) }
   }, [])
 
-  // Push URL when user loads
+  // Push URL
   useEffect(() => {
-    if (sun?.name) {
+    if (main.sun?.name) {
       const url = new URL(window.location.href)
-      url.searchParams.set('user', sun.name)
+      url.searchParams.set('user', main.sun.name)
       window.history.replaceState({}, '', url.toString())
       setShowIntro(false)
     }
-  }, [sun?.name])
+  }, [main.sun?.name])
 
   function handleSoundToggle() {
     const next = !soundOn
@@ -48,25 +51,28 @@ export default function App() {
     setSoundEnabled(next)
   }
 
-  function handleScreenshot() {
-    screenshotRef.current?.()
-  }
-
   function handleSearch(username) {
     setShowIntro(false)
-    loadUser(username)
+    main.loadUser(username)
   }
 
   function copyShareLink() {
-    if (!sun?.name) return
+    if (!main.sun?.name) return
     const url = new URL(window.location.href)
-    url.searchParams.set('user', sun.name)
+    url.searchParams.set('user', main.sun.name)
     navigator.clipboard.writeText(url.toString())
+  }
+
+  function handleCompare(username) {
+    if (!username.trim()) return
+    setCompareUsername(username.trim())
+    compare.loadUser(username.trim())
+    setCompareMode(true)
   }
 
   return (
     <div className="app-shell">
-      {showIntro && <IntroScreen onSearch={handleSearch} loading={loading} />}
+      {showIntro && <IntroScreen onSearch={handleSearch} loading={main.loading} />}
 
       <div className={`main-layout ${showIntro ? 'hidden' : ''}`}>
         <button className="hamburger" onClick={() => setSidebarOpen(o => !o)} aria-label="Toggle sidebar">
@@ -75,34 +81,36 @@ export default function App() {
 
         <aside className={`sidebar-wrapper ${sidebarOpen ? 'open' : 'closed'}`}>
           <Sidebar
-            sun={sun}
-            planets={planets}
-            loading={loading}
-            error={error}
+            sun={main.sun}
+            planets={main.planets}
+            loading={main.loading}
+            error={main.error}
             onSearch={handleSearch}
             speed={speed}
             onSpeedChange={setSpeed}
             soundOn={soundOn}
             onSoundToggle={handleSoundToggle}
-            onScreenshot={handleScreenshot}
+            onScreenshot={() => screenshotRef.current?.()}
             onShareLink={copyShareLink}
             showConstellation={showConstellation}
             onConstellationToggle={() => setShowConstellation(v => !v)}
+            onCompare={handleCompare}
           />
         </aside>
 
         <main className="canvas-wrapper">
           <CosmosCanvas
-            sun={sun}
-            planets={planets}
-            asteroids={asteroids}
-            constellation={constellation}
-            nebulaClouds={nebulaClouds}
-            comet={comet}
+            sun={main.sun}
+            planets={main.planets}
+            asteroids={main.asteroids}
+            constellation={main.constellation}
+            nebulaClouds={main.nebulaClouds}
+            comet={main.comet}
             speed={speed}
             showConstellation={showConstellation}
             onTooltip={setTooltip}
             onCommitFlash={setFlashMsg}
+            onPlanetClick={setDrawerPlanet}
             screenshotRef={screenshotRef}
           />
           <Tooltip tooltip={tooltip} />
@@ -111,6 +119,30 @@ export default function App() {
           <HelpPanel />
         </main>
       </div>
+
+      {/* Compare split screen */}
+      {compareMode && (
+        <CompareView
+          left={{
+            sun: main.sun, planets: main.planets,
+            asteroids: main.asteroids, constellation: main.constellation,
+            nebulaClouds: main.nebulaClouds, comet: main.comet,
+            username: main.sun?.name || '',
+          }}
+          right={{
+            sun: compare.sun, planets: compare.planets,
+            asteroids: compare.asteroids, constellation: compare.constellation,
+            nebulaClouds: compare.nebulaClouds, comet: compare.comet,
+            username: compareUsername,
+          }}
+          onClose={() => setCompareMode(false)}
+        />
+      )}
+
+      {/* Commit drawer */}
+      {drawerPlanet && (
+        <CommitDrawer planet={drawerPlanet} onClose={() => setDrawerPlanet(null)} />
+      )}
     </div>
   )
 }
